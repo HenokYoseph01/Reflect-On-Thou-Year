@@ -5,6 +5,9 @@ import {
   submissions,
   awaitingSubmission,
   getRandomSubmission,
+  getUserSubmission,
+  awaitingDeletion,
+  deleteSubmissionById,
 } from "./storage";
 import { randomUUID } from "crypto";
 
@@ -42,16 +45,21 @@ bot.hears("❌ Cancel", async (ctx) => {
   const userId = ctx.from?.id;
   if (!userId) return;
 
+  let cancelled = false;
+
   if (awaitingSubmission.has(userId)) {
     awaitingSubmission.delete(userId);
-    await ctx.reply("❌ Submission cancelled.", {
-      reply_markup: mainMenu,
-    });
-  } else {
-    await ctx.reply("Nothing to cancel.", {
-      reply_markup: mainMenu,
-    });
+    cancelled = true;
   }
+
+  if (awaitingDeletion.has(userId)) {
+    awaitingDeletion.delete(userId);
+    cancelled = true;
+  }
+
+  await ctx.reply(cancelled ? "❌ Action cancelled." : "Nothing to cancel.", {
+    reply_markup: mainMenu,
+  });
 });
 
 bot.hears("📖 Read a Reflection", async (ctx) => {
@@ -71,53 +79,109 @@ bot.hears("📖 Read a Reflection", async (ctx) => {
 });
 
 bot.hears("🗑 My Submissions", async (ctx) => {
-  await ctx.reply("🗑 Coming soon: manage your submissions.");
+  const userId = ctx.from?.id;
+  if (!userId) return;
+
+  const userSubs = getUserSubmission(userId);
+
+  if (userSubs.length === 0) {
+    await ctx.reply("📭 You haven't submitted anything yet.", {
+      reply_markup: mainMenu,
+    });
+    return;
+  }
+
+  const idsInOrder = userSubs.map((s) => s.id);
+  awaitingDeletion.set(userId, idsInOrder);
+
+  const list = userSubs
+    .map(
+      (s, i) =>
+        `*${i + 1}.* ${s.content.slice(0, 40)}${
+          s.content.length > 40 ? "…" : ""
+        }`
+    )
+    .join("\n\n");
+
+  await ctx.reply(
+    "🗂 *Your Submissions*\n\n" +
+      list +
+      "\n\nReply with the *number* of the entry you want to delete.\nType /cancel to abort.",
+    { parse_mode: "Markdown", reply_markup: submissionMenu }
+  );
 });
 
 bot.command("cancel", async (ctx) => {
   const userId = ctx.from?.id;
   if (!userId) return;
 
+  let cancelled = false;
+
   if (awaitingSubmission.has(userId)) {
     awaitingSubmission.delete(userId);
-    await ctx.reply("❌ Submission cancelled.", {
-      reply_markup: mainMenu,
-    });
-  } else {
-    await ctx.reply("Nothing to cancel.", {
-      reply_markup: mainMenu,
-    });
+    cancelled = true;
   }
+
+  if (awaitingDeletion.has(userId)) {
+    awaitingDeletion.delete(userId);
+    cancelled = true;
+  }
+
+  await ctx.reply(cancelled ? "❌ Action cancelled." : "Nothing to cancel.", {
+    reply_markup: mainMenu,
+  });
 });
 
 bot.on("message:text", async (ctx) => {
   const userId = ctx.from?.id;
   if (!userId) return;
 
-  // Only capture if user is in submission mode
-  if (!awaitingSubmission.has(userId)) return;
+  const text = ctx.message.text.trim();
 
-  const text = ctx.message.text.trim(); //Clean up text
+  // 1️⃣ Submission flow
+  if (awaitingSubmission.has(userId)) {
+    if (text.length < 20) {
+      await ctx.reply("Please write a bit more before submitting gang 🥀");
+      return;
+    }
 
-  if (text.length < 20) {
-    await ctx.reply("Please write a bit more before submitting gang 🥀");
+    submissions.push({
+      id: randomUUID(),
+      userId,
+      content: text,
+      createdAt: new Date(),
+    });
+
+    awaitingSubmission.delete(userId);
+
+    await ctx.reply(
+      "✅ Your reflection has been saved anonymously.\n\nThank you for sharing 🌱",
+      { reply_markup: mainMenu }
+    );
     return;
   }
 
-  submissions.push({
-    id: randomUUID(),
-    userId,
-    content: text,
-    createdAt: new Date(),
-  });
-  console.log(submissions);
+  // 2️⃣ Deletion flow
+  if (awaitingDeletion.has(userId)) {
+    const index = Number(text) - 1;
+    const ids = awaitingDeletion.get(userId)!;
 
-  awaitingSubmission.delete(userId);
+    if (Number.isNaN(index) || index < 0 || index >= ids.length) {
+      await ctx.reply("Please reply with a valid number.");
+      return;
+    }
+    const idToDelete = ids[index]!;
+    deleteSubmissionById(idToDelete);
+    awaitingDeletion.delete(userId);
 
-  await ctx.reply(
-    "✅ Your reflection has been saved anonymously.\n\nThank you for sharing 🌱",
-    { reply_markup: mainMenu }
-  );
+    await ctx.reply("✅ Submission deleted successfully.", {
+      reply_markup: mainMenu,
+    });
+    return;
+  }
+
+  // 3️⃣ Default case (optional)
+  // await ctx.reply("Please choose an option from the menu.");
 });
 
 bot.start();
