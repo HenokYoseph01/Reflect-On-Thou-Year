@@ -8,3 +8,5 @@ export const mainMenu = new Keyboard()
   .row()
   .text("🗑 My Submissions")
   .resized();
+
+export const submissionMenu = new Keyboard().text("❌ Cancel").resized();
