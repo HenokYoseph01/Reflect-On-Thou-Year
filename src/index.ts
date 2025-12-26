@@ -1,7 +1,11 @@
 import "dotenv/config";
 import { bot } from "./bot";
 import { mainMenu, submissionMenu } from "./menu";
-import { submissions, awaitingSubmission } from "./storage";
+import {
+  submissions,
+  awaitingSubmission,
+  getRandomSubmission,
+} from "./storage";
 import { randomUUID } from "crypto";
 
 bot.command("start", (ctx) => {
@@ -51,7 +55,19 @@ bot.hears("❌ Cancel", async (ctx) => {
 });
 
 bot.hears("📖 Read a Reflection", async (ctx) => {
-  await ctx.reply("📖 Coming soon: random reflections to read.");
+  const submission = getRandomSubmission();
+
+  if (!submission) {
+    await ctx.reply("📭 No reflections yet.\n\nBe the first to share one 🌱", {
+      reply_markup: mainMenu,
+    });
+    return;
+  }
+
+  await ctx.reply("📖 *Anonymous Reflection*\n\n" + submission.content, {
+    parse_mode: "Markdown",
+    reply_markup: mainMenu,
+  });
 });
 
 bot.hears("🗑 My Submissions", async (ctx) => {
