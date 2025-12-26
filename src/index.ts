@@ -1,15 +1,13 @@
 import "dotenv/config";
 import { bot } from "./bot";
 import { mainMenu, submissionMenu } from "./menu";
+import { awaitingSubmission, awaitingDeletion } from "./storage";
 import {
-  submissions,
-  awaitingSubmission,
-  getRandomSubmission,
-  getUserSubmission,
-  awaitingDeletion,
+  createSubmission,
   deleteSubmissionById,
-} from "./storage";
-import { randomUUID } from "crypto";
+  getRandomSubmission,
+  getUserSubmissions,
+} from "./storage/submission";
 
 bot.command("start", (ctx) => {
   ctx.reply(
@@ -21,6 +19,8 @@ bot.command("start", (ctx) => {
 });
 
 //Menu events
+
+// Submit Reflection
 bot.hears("✍️ Submit Reflection", async (ctx) => {
   const userId = ctx.from?.id;
   if (!userId) return;
@@ -41,29 +41,9 @@ bot.hears("✍️ Submit Reflection", async (ctx) => {
   );
 });
 
-bot.hears("❌ Cancel", async (ctx) => {
-  const userId = ctx.from?.id;
-  if (!userId) return;
-
-  let cancelled = false;
-
-  if (awaitingSubmission.has(userId)) {
-    awaitingSubmission.delete(userId);
-    cancelled = true;
-  }
-
-  if (awaitingDeletion.has(userId)) {
-    awaitingDeletion.delete(userId);
-    cancelled = true;
-  }
-
-  await ctx.reply(cancelled ? "❌ Action cancelled." : "Nothing to cancel.", {
-    reply_markup: mainMenu,
-  });
-});
-
+// Read Reflection
 bot.hears("📖 Read a Reflection", async (ctx) => {
-  const submission = getRandomSubmission();
+  const submission = await getRandomSubmission();
 
   if (!submission) {
     await ctx.reply("📭 No reflections yet.\n\nBe the first to share one 🌱", {
@@ -78,11 +58,12 @@ bot.hears("📖 Read a Reflection", async (ctx) => {
   });
 });
 
+// Check Own Submissions
 bot.hears("🗑 My Submissions", async (ctx) => {
   const userId = ctx.from?.id;
   if (!userId) return;
 
-  const userSubs = getUserSubmission(userId);
+  const userSubs = await getUserSubmissions(userId);
 
   if (userSubs.length === 0) {
     await ctx.reply("📭 You haven't submitted anything yet.", {
@@ -109,6 +90,27 @@ bot.hears("🗑 My Submissions", async (ctx) => {
       "\n\nReply with the *number* of the entry you want to delete.\nType /cancel to abort.",
     { parse_mode: "Markdown", reply_markup: submissionMenu }
   );
+});
+
+bot.hears("❌ Cancel", async (ctx) => {
+  const userId = ctx.from?.id;
+  if (!userId) return;
+
+  let cancelled = false;
+
+  if (awaitingSubmission.has(userId)) {
+    awaitingSubmission.delete(userId);
+    cancelled = true;
+  }
+
+  if (awaitingDeletion.has(userId)) {
+    awaitingDeletion.delete(userId);
+    cancelled = true;
+  }
+
+  await ctx.reply(cancelled ? "❌ Action cancelled." : "Nothing to cancel.", {
+    reply_markup: mainMenu,
+  });
 });
 
 bot.command("cancel", async (ctx) => {
@@ -145,12 +147,7 @@ bot.on("message:text", async (ctx) => {
       return;
     }
 
-    submissions.push({
-      id: randomUUID(),
-      userId,
-      content: text,
-      createdAt: new Date(),
-    });
+    await createSubmission(userId, text);
 
     awaitingSubmission.delete(userId);
 
@@ -171,7 +168,7 @@ bot.on("message:text", async (ctx) => {
       return;
     }
     const idToDelete = ids[index]!;
-    deleteSubmissionById(idToDelete);
+    deleteSubmissionById(idToDelete, userId);
     awaitingDeletion.delete(userId);
 
     await ctx.reply("✅ Submission deleted successfully.", {
