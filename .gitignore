@@ -1,2 +1,13 @@
-node_modules
+# SQLite database file
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment variables file
 .env
+
+# Node modules directory
+node_modules/
+
+# Drizzle kit generated files (if any temporary ones are created)
+.drizzle-kit-cache
