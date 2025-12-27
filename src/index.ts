@@ -199,8 +199,10 @@ bot.on("message:text", async (ctx) => {
     return;
   }
 
-  // 3️⃣ Default case (optional)
-  // await ctx.reply("Please choose an option from the menu.");
+  await ctx.reply(
+    "👋 Hey!\n\nTo submit a reflection, click **Submit Reflection**",
+    { reply_markup: mainMenu, parse_mode: "Markdown" }
+  );
 });
 
 bot.start();
