@@ -9,10 +9,27 @@ import {
   getUserSubmissions,
 } from "./storage/submission";
 
-bot.command("start", (ctx) => {
-  ctx.reply(
-    "Welcome 🌱\n\nThis bot collects anonymous reflections about 2025.\n\nUse /submit to share yours.",
+bot.command("start", async (ctx) => {
+  //To prevent re-etrant confusion (basically reset state of flow)
+  const userId = ctx.from?.id;
+  if (userId) {
+    awaitingSubmission.delete(userId);
+    awaitingDeletion.delete(userId);
+  }
+  await ctx.reply(
+    `🌱 *2025 Reflections*
+
+This is a quiet space to reflect on how your year went.
+
+• Write about your 2025 — ups, downs, lessons  
+• Read anonymous reflections from others  
+• Share advice for 2026  
+
+Everything is *fully anonymous*.
+
+Take your time. When you're ready, choose an option below.`,
     {
+      parse_mode: "Markdown",
       reply_markup: mainMenu,
     }
   );
