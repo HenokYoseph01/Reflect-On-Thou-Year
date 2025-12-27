@@ -140,7 +140,7 @@ bot.on("message:text", async (ctx) => {
 
   const text = ctx.message.text.trim();
 
-  // 1️⃣ Submission flow
+  // 1️. Submission flow
   if (awaitingSubmission.has(userId)) {
     if (text.length < 20) {
       await ctx.reply("Please write a bit more before submitting gang 🥀");
@@ -158,7 +158,7 @@ bot.on("message:text", async (ctx) => {
     return;
   }
 
-  // 2️⃣ Deletion flow
+  // 2️. Deletion flow
   if (awaitingDeletion.has(userId)) {
     const index = Number(text) - 1;
     const ids = awaitingDeletion.get(userId)!;
