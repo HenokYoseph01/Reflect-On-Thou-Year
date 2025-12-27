@@ -11,3 +11,5 @@ node_modules/
 
 # Drizzle kit generated files (if any temporary ones are created)
 .drizzle-kit-cache
+
+dist
