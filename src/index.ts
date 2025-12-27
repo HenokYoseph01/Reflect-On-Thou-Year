@@ -8,6 +8,11 @@ import {
   getRandomSubmission,
   getUserSubmissions,
 } from "./storage/submission";
+//Prod reasons
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { db } from "./db";
+
+migrate(db, { migrationsFolder: "drizzle" });
 
 bot.command("start", async (ctx) => {
   //To prevent re-etrant confusion (basically reset state of flow)
