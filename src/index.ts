@@ -65,7 +65,9 @@ bot.hears("✍️ Submit Reflection", async (ctx) => {
 
 // Read Reflection
 bot.hears("📖 Read a Reflection", async (ctx) => {
-  const submission = await getRandomSubmission();
+  const userId = ctx.from?.id;
+  if (!userId) return;
+  const submission = await getRandomSubmission(userId);
 
   if (!submission) {
     await ctx.reply("📭 No reflections yet.\n\nBe the first to share one 🌱", {
