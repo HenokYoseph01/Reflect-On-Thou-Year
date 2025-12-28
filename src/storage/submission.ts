@@ -2,7 +2,6 @@ import { randomUUID } from "crypto";
 import { eq, and, sql } from "drizzle-orm";
 import { db } from "../db";
 import { submission } from "../schema";
-import { getNextIdFromShuffleBag } from "../shuffleBag";
 
 // Create Submission
 export async function createSubmission(userId: number, content: string) {
@@ -14,24 +13,12 @@ export async function createSubmission(userId: number, content: string) {
   });
 }
 
-async function getAllSubmissionIds(): Promise<string[]> {
-  const rows = await db.select({ id: submission.id }).from(submission);
-
-  return rows.map((r) => r.id);
-}
-
 // Read Submissions
-export async function getRandomSubmission(userId: number) {
-  const allIds = await getAllSubmissionIds();
-  if (allIds.length === 0) return null;
-
-  const nextId = getNextIdFromShuffleBag(userId, allIds);
-  if (!nextId) return null;
-
+export async function getRandomSubmission() {
   const result = await db
     .select()
     .from(submission)
-    .where(eq(submission.id, nextId))
+    .orderBy(sql`RANDOM()`)
     .limit(1);
 
   return result[0] ?? null;
