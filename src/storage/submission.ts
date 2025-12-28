@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { eq, and, sql } from "drizzle-orm";
 import { db } from "../db";
 import { submission } from "../schema";
-import { getNextIdFromShuffleBag } from "../shufflebag";
+import { getNextIdFromShuffleBag } from "../shuffleBag";
 
 // Create Submission
 export async function createSubmission(userId: number, content: string) {
